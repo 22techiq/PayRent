@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PayRent</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Space+Grotesk:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+
+body{
+  font-family:'Inter',sans-serif;
+  background:#020617;
+  color:white;
+  overflow-x:hidden;
+}
+
+/* BUTTON RESET */
+button{
+  border:none;
+  font-family:inherit;
+  cursor:pointer;
+}
+
+/* GLOW */
+.glow{
+  position:fixed;
+  width:700px;
+  height:700px;
+  background:radial-gradient(circle,#22c55e33,transparent);
+  top:-200px;
+  right:-200px;
+  filter:blur(140px);
+}
+
+/* NAV */
+nav{
+  display:flex;
+  justify-content:space-between;
+  padding:20px;
+}
+
+.logo{
+  font-family:'Space Grotesk';
+}
+
+.login-btn{
+  padding:10px 18px;
+  border-radius:10px;
+  background:rgba(255,255,255,0.05);
+  color:white;
+}
+
+/* HERO */
+.hero{
+  padding:80px 16px;
+  text-align:center;
+  max-width:900px;
+  margin:auto;
+}
+
+.hero h1{
+  font-family:'Space Grotesk';
+  font-size:clamp(32px,6vw,58px);
+}
+
+.hero p{
+  margin-top:20px;
+  color:#94a3b8;
+  line-height:1.6;
+}
+
+.cta{
+  margin-top:30px;
+  padding:16px 30px;
+  background:linear-gradient(135deg,#22c55e,#16a34a);
+  border-radius:14px;
+  color:white;
+}
+
+/* SECTION */
+.section{
+  padding:60px 16px;
+  text-align:center;
+}
+
+.card{
+  width:100%;
+  max-width:340px;
+  margin:auto;
+  background:rgba(255,255,255,0.04);
+  padding:25px;
+  border-radius:20px;
+}
+
+/* MODAL */
+.modal{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.7);
+  display:none;
+  justify-content:center;
+  align-items:center;
+}
+
+.modal-content{
+  width:90%;
+  max-width:320px;
+  background:#0f172a;
+  padding:25px;
+  border-radius:16px;
+}
+
+input{
+  width:100%;
+  padding:12px;
+  margin:10px 0;
+  border-radius:10px;
+  border:none;
+}
+
+/* DASHBOARD */
+.dashboard{
+  display:none;
+  padding:20px;
+}
+
+.status{
+  margin-top:15px;
+  padding:10px;
+  border-radius:10px;
+  text-align:center;
+}
+
+.pending{background:#f59e0b}
+.paid{background:#22c55e}
+
+/* LOADER */
+.loader{
+  display:none;
+  margin-top:10px;
+}
+
+.loader div{
+  width:10px;
+  height:10px;
+  background:#22c55e;
+  display:inline-block;
+  margin:3px;
+  border-radius:50%;
+  animation:bounce 0.6s infinite alternate;
+}
+
+.loader div:nth-child(2){animation-delay:0.2s}
+.loader div:nth-child(3){animation-delay:0.4s}
+
+@keyframes bounce{
+  to{transform:translateY(-8px)}
+}
+</style>
+</head>
+
+<body>
+
+<div class="glow"></div>
+
+<nav>
+  <div class="logo">🏠 PayRent</div>
+  <button class="login-btn" onclick="openLogin()">Login</button>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="hero">
+  <h1>Experience a Smarter Way to Pay Rent</h1>
+  <p>
+    PayRent is designed to eliminate the friction of traditional rent payments.  
+    With secure M-Pesa integration, real-time confirmations, and a seamless mobile experience,  
+    tenants can settle rent in seconds while landlords track payments effortlessly.
+  </p>
+
+  <button class="cta" onclick="openLogin()">Access Your Dashboard</button>
+
+  <div style="margin-top:40px;color:#64748b;font-size:14px;">
+    Trusted for fast, secure and reliable rent transactions
+  </div>
+</section>
+
+<!-- VALUE -->
+<section class="section">
+  <div class="card">
+    <h3 style="font-family:'Space Grotesk'">Built for Simplicity</h3>
+    <p style="color:#94a3b8;margin-top:10px">
+      No paperwork. No delays. Just a streamlined experience that ensures every transaction is smooth, transparent and instant.
+    </p>
+  </div>
+</section>
+
+<!-- LOGIN MODAL -->
+<div class="modal" id="modal">
+  <div class="modal-content">
+    <h3 style="font-family:'Space Grotesk'">Tenant Login</h3>
+    <input id="phone" placeholder="2547XXXXXXXX">
+    <input id="password" type="password">
+    <button class="cta" onclick="login()">Continue</button>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div class="dashboard" id="dashboard">
+  <div class="card">
+    <h2 id="name"></h2>
+    <p>🏠 <span id="house"></span></p>
+    <p>💰 KES <span id="rent"></span></p>
+
+    <div id="statusBox" class="status pending">Pending</div>
+
+    <button class="cta" onclick="pay()">Pay via M-Pesa</button>
+
+    <div class="loader" id="loader">
+      <div></div><div></div><div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = "https://script.google.com/macros/s/AKfycby1wQOQl36iqUizLBT4p_47qNx6sUk2lLC2Etl5H1f5CGKcdUuuSMzXXu8y26oKaDF9GA/exec";
+
+let tenant = {};
+let interval = null;
+
+function el(id){ return document.getElementById(id); }
+
+/* OPEN MODAL */
+function openLogin(){
+  el("modal").style.display = "flex";
+}
+
+/* LOGIN */
+function login(){
+  const phone = el("phone").value;
+  const password = el("password").value;
+
+  if(!phone || !password){
+    alert("Enter phone and password");
+    return;
+  }
+
+  fetch(API,{
+    method:"POST",
+    body:new URLSearchParams({
+      action:"login",
+      phone,
+      password
+    })
+  })
+  .then(r=>r.json())
+  .then(d=>{
+    if(d.status==="success"){
+      tenant.id = d.id;
+      tenant.phone = phone;
+
+      el("modal").style.display="none";
+
+      loadTenant();
+      startStatusCheck();
+    } else {
+      alert("Invalid login");
+    }
+  })
+  .catch(()=>alert("API error"));
+}
+
+/* LOAD DASHBOARD */
+function loadTenant(){
+  fetch(API,{
+    method:"POST",
+    body:new URLSearchParams({
+      action:"getTenant",
+      id:tenant.id
+    })
+  })
+  .then(r=>r.json())
+  .then(d=>{
+    el("hero").style.display="none";
+    el("dashboard").style.display="block";
+
+    el("name").innerText=d.name;
+    el("house").innerText=d.house;
+    el("rent").innerText=d.rent;
+
+    tenant.rent=d.rent;
+  });
+}
+
+/* PAY */
+function pay(){
+  el("loader").style.display="block";
+  el("statusBox").innerText="Pending...";
+  el("statusBox").className="status pending";
+
+  fetch(API,{
+    method:"POST",
+    body:new URLSearchParams({
+      action:"stk",
+      phone:tenant.phone,
+      amount:tenant.rent
+    })
+  })
+  .then(()=>alert("📱 Enter M-Pesa PIN"));
+}
+
+/* STATUS */
+function startStatusCheck(){
+  interval = setInterval(()=>{
+    fetch(API,{
+      method:"POST",
+      body:new URLSearchParams({
+        action:"status",
+        phone:tenant.phone
+      })
+    })
+    .then(r=>r.json())
+    .then(d=>{
+      if(d.status==="Paid"){
+        el("statusBox").innerText="Paid ✅";
+        el("statusBox").className="status paid";
+        el("loader").style.display="none";
+        clearInterval(interval);
+      }
+    });
+  },4000);
+}
+</script>
+
+</body>
+</html>
